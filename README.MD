@@ -98,3 +98,8 @@ This library was designed with performance as a primary goal.
 ## License
 
 This library is licensed under the MIT License.
+
+## Changes
+
+  - 1.1.0 - Added support for `netstandard2.0`
+  - 1.0.0 - Initial version

@@ -14,7 +14,14 @@ public static class ZBase32Encoder
 
     static ZBase32Encoder()
     {
+#if NETSTANDARD2_0
+        for (int i = 0; i < SDecodeMap.Length; i++)
+        {
+            SDecodeMap[i] = 255;
+        }
+#else
         Array.Fill(SDecodeMap, (byte)255);
+#endif
         for (byte i = 0; i < Alphabet.Length; i++)
         {
             SDecodeMap[Alphabet[i]] = i;
@@ -76,7 +83,12 @@ public static class ZBase32Encoder
         {
             Span<char> buffer = stackalloc char[encodedLength];
             EncodeTo(data, buffer);
+#if NETSTANDARD2_0
+            // The string(ReadOnlySpan<char>) constructor is not available on netstandard2.0.
+            return new string(buffer.ToArray());
+#else
             return new string(buffer);
+#endif
         }
 
         // For larger strings, rent a buffer from the array pool.
@@ -85,7 +97,7 @@ public static class ZBase32Encoder
         {
             Span<char> bufferSpan = bufferFromPool.AsSpan(0, encodedLength);
             EncodeTo(data, bufferSpan);
-            return new string(bufferSpan);
+            return new string(bufferFromPool, 0, encodedLength);
         }
         finally
         {
@@ -156,9 +168,16 @@ public static class ZBase32Encoder
         // Use a stack buffer for small strings to avoid heap allocation.
         if (maxByteCount <= 256)
         {
+#if NETSTANDARD2_0
+            // Encoding.GetBytes(string, Span<byte>) is not available on netstandard2.0.
+            byte[] bytes = new byte[maxByteCount];
+            int byteCount = Encoding.UTF8.GetBytes(text, 0, text.Length, bytes, 0);
+            return Encode(bytes.AsSpan(0, byteCount));
+#else
             Span<byte> bytes = stackalloc byte[maxByteCount];
             int actualByteCount = Encoding.UTF8.GetBytes(text, bytes);
             return Encode(bytes.Slice(0, actualByteCount));
+#endif
         }
 
         // For larger strings, use the classic GetBytes method.
